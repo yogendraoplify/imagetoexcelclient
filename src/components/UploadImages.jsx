@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { BASE_URL } from "../constant/apiUrl";
 
 export default function UploadImages() {
   const [files, setFiles] = useState([]);
@@ -10,11 +11,11 @@ export default function UploadImages() {
     files.forEach((f) => formData.append("images", f));
 
     const res = await axios.post(
-      "http://localhost:5000/api/ocr/upload",
+      `${BASE_URL}/api/ocr/upload`,
       formData
     );
 
-    setDownload(`http://localhost:5000/${res.data.excelPath}`);
+    setDownload(`${BASE_URL}/${res.data.excelPath}`);
   };
 
   return (

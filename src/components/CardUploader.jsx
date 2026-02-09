@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import CardRow from "./CardRow";
+import { BASE_URL } from "../constant/apiUrl";
 
 export default function CardUploader() {
   const [cards, setCards] = useState([]);
@@ -29,7 +30,7 @@ export default function CardUploader() {
     });
 
     const res = await axios.post(
-      "http://localhost:5000/api/ocr/cards",
+      `${BASE_URL}/api/ocr/cards`,
       form
     );
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { BASE_URL } from "../constant/apiUrl";
 
-const API_BASE = "http://localhost:5000";
 
 export default function ExcelHistory() {
   const [files, setFiles] = useState([]);
@@ -15,7 +15,7 @@ export default function ExcelHistory() {
   const fetchExcels = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_BASE}/api/ocr/excels`);
+      const res = await axios.get(`${BASE_URL}/api/ocr/excels`);
       setFiles(res.data);
     } catch {
       setError("Failed to load Excel files");
@@ -25,7 +25,7 @@ export default function ExcelHistory() {
   };
 
   const downloadFile = (fileName) => {
-    window.open(`${API_BASE}/api/ocr/excels/${fileName}`, "_blank");
+    window.open(`${BASE_URL}/api/ocr/excels/${fileName}`, "_blank");
   };
 
   const deleteFile = async (fileName) => {
@@ -36,7 +36,7 @@ export default function ExcelHistory() {
 
     try {
       await axios.delete(
-        `${API_BASE}/api/ocr/excels/${fileName}`
+        `${BASE_URL}/api/ocr/excels/${fileName}`
       );
       setFiles((prev) =>
         prev.filter((f) => f.fileName !== fileName)
