@@ -69,7 +69,7 @@ export default function ExcelHistory() {
           </thead>
 
           <tbody>
-            {files.map((file) => (
+            {files?.map((file) => (
               <tr key={file.fileName}>
                 <td className="p-2 border">{file.fileName}</td>
                 <td className="p-2 border">{file.sizeKB}</td>

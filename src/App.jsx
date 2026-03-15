@@ -3,6 +3,7 @@ import UploadImages from './components/UploadImages'
 import CardUploader from './components/CardUploader'
 import BusinessCardExtractor from './components/BusinessCardExtractor'
 import ExcelHistory from './screens/ExcelHistory'
+import InstallPrompt from './components/InstallPrompt'
 
 const App = () => {
   return (
@@ -13,7 +14,8 @@ const App = () => {
       
      <div className='text-center mt-5'>
       <CardUploader />
-      <ExcelHistory />
+            <InstallPrompt />
+
       {/* <BusinessCardExtractor /> */}
      </div>
     </div>
