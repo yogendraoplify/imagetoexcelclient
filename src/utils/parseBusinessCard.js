@@ -41,3 +41,33 @@ const phones = [...text.matchAll(/(\+?\d{1,3}[\s-]?)?\(?\d{2,4}\)?[\s-]?\d{3,5}[
     addresses:     [...new Set(addressLines)].join(" | "),
   };
 };
+
+export const deduplicateBatch = (rows) => {
+  const seenEmails = new Set();
+  const seenPhones = new Set();
+  const duplicates = [];
+  const unique = [];
+
+  for (const row of rows) {
+    const emails = row.email
+      ? row.email.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)
+      : [];
+
+    const phones = row.phoneNumbers
+      ? row.phoneNumbers.split(",").map((p) => p.trim().replace(/\s+/g, "")).filter(Boolean)
+      : [];
+
+    const hasEmailDupe = emails.some((e) => seenEmails.has(e));
+    const hasPhoneDupe = phones.some((p) => seenPhones.has(p));
+
+    if (hasEmailDupe || hasPhoneDupe) {
+      duplicates.push(row);
+    } else {
+      emails.forEach((e) => seenEmails.add(e));
+      phones.forEach((p) => seenPhones.add(p));
+      unique.push(row);
+    }
+  }
+
+  return { unique, duplicates };
+};

@@ -3,7 +3,10 @@ import axios from "axios";
 import CardRow from "./tables/CardRow";
 import { BASE_URL } from "../constant/apiUrl";
 import { extractTextFromImage } from "../utils/ocr";
-import { parseBusinessCard } from "../utils/parseBusinessCard";
+import {
+  parseBusinessCard,
+  deduplicateBatch,
+} from "../utils/parseBusinessCard";
 import EntriesTable from "./tables/EntriesTable";
 
 const MAX_CARDS = 20;
@@ -26,7 +29,9 @@ export default function CardUploader() {
     setEntries(res.data);
   };
 
-  useEffect(() => { fetchEntries(); }, []);
+  useEffect(() => {
+    fetchEntries();
+  }, []);
 
   const addCard = () => {
     if (cards.length >= MAX_CARDS)
@@ -42,9 +47,8 @@ export default function CardUploader() {
 
   const updateCard = (id, field, file) =>
     setCards((c) =>
-      c.map((card) => (card.id === id ? { ...card, [field]: file } : card))
+      c.map((card) => (card.id === id ? { ...card, [field]: file } : card)),
     );
-
   const submit = async () => {
     const valid = cards.filter((c) => c.frontImage);
     if (valid.length === 0)
@@ -56,26 +60,21 @@ export default function CardUploader() {
     try {
       const rows = [];
 
-      // Run OCR entirely in the browser
       for (let i = 0; i < valid.length; i++) {
         const card = valid[i];
 
-        const frontText = await extractTextFromImage(
-          card.frontImage,
-          (pct) =>
-            setProgress((prev) =>
-              prev.map((p, idx) => (idx === i ? { ...p, front: pct } : p))
-            )
+        const frontText = await extractTextFromImage(card.frontImage, (pct) =>
+          setProgress((prev) =>
+            prev.map((p, idx) => (idx === i ? { ...p, front: pct } : p)),
+          ),
         );
 
         let backText = "";
         if (card.backImage) {
-          backText = await extractTextFromImage(
-            card.backImage,
-            (pct) =>
-              setProgress((prev) =>
-                prev.map((p, idx) => (idx === i ? { ...p, back: pct } : p))
-              )
+          backText = await extractTextFromImage(card.backImage, (pct) =>
+            setProgress((prev) =>
+              prev.map((p, idx) => (idx === i ? { ...p, back: pct } : p)),
+            ),
           );
         }
 
@@ -83,14 +82,44 @@ export default function CardUploader() {
         rows.push(parsed);
       }
 
-      // Send only the clean parsed JSON — no images, no files
-      const res = await axios.post(`${BASE_URL}/api/ocr/cards`, { rows });
+      // Remove duplicates within this batch first
+      const { unique, duplicates } = deduplicateBatch(rows);
 
-      // Download Excel returned from server
+      if (unique.length === 0) {
+        showToast(
+          "All cards in this batch are duplicates — nothing saved.",
+          "error",
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Send only unique rows to backend
+      // Backend will further check against existing DB records
+      const res = await axios.post(`${BASE_URL}/api/ocr/cards`, {
+        rows: unique,
+      });
+
+      const { savedCount, skippedCount } = res.data;
+
+      // Build a helpful summary toast
+      const batchDupes = duplicates.length;
+      const dbDupes = skippedCount;
+      const total = batchDupes + dbDupes;
+
+      if (total > 0) {
+        showToast(
+          `${savedCount} saved · ${batchDupes} duplicate(s) in batch · ${dbDupes} already in database`,
+          "info",
+        );
+      } else {
+        showToast(`${savedCount} card(s) saved successfully!`);
+      }
+
+      // Download Excel
       const excelRes = await axios.get(`${BASE_URL}/api/ocr/entries/export`, {
         responseType: "blob",
       });
-
       const url = URL.createObjectURL(excelRes.data);
       const a = document.createElement("a");
       a.href = url;
@@ -98,7 +127,6 @@ export default function CardUploader() {
       a.click();
       URL.revokeObjectURL(url);
 
-      showToast(`${res.data.savedCount} card(s) saved!`);
       setCards([]);
       setProgress([]);
       fetchEntries();
@@ -109,14 +137,14 @@ export default function CardUploader() {
       setLoading(false);
     }
   };
-
   return (
     <div className="min-h-screen w-full bg-[#F4F8FB] font-['Inter']">
-
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-lg text-white text-sm font-semibold shadow-lg
-          ${toast.type === "error" ? "bg-red-500" : "bg-[#16A34A]"}`}>
+        <div
+          className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-lg text-white text-sm font-semibold shadow-lg
+          ${toast.type === "error" ? "bg-red-500" : "bg-[#16A34A]"}`}
+        >
           {toast.msg}
         </div>
       )}
@@ -125,7 +153,9 @@ export default function CardUploader() {
       <header className="bg-white border-b border-[#D5E8FF] px-8 py-4 flex flex-col md:flex-row items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <span className="text-2xl">🪪</span>
-          <span className="text-xl font-bold text-[#4674AB] tracking-tight">CardScan Pro</span>
+          <span className="text-xl font-bold text-[#4674AB] tracking-tight">
+            CardScan Pro
+          </span>
         </div>
         <nav className="flex gap-2">
           {[
@@ -136,9 +166,11 @@ export default function CardUploader() {
               key={key}
               onClick={() => setTab(key)}
               className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-all
-                ${tab === key
-                  ? "bg-[#EEF4FF] text-[#4674AB] border-[#4674AB]"
-                  : "bg-white text-gray-500 border-gray-200 hover:border-[#4674AB] hover:text-[#4674AB]"}`}
+                ${
+                  tab === key
+                    ? "bg-[#EEF4FF] text-[#4674AB] border-[#4674AB]"
+                    : "bg-white text-gray-500 border-gray-200 hover:border-[#4674AB] hover:text-[#4674AB]"
+                }`}
             >
               {label}
             </button>
@@ -150,7 +182,9 @@ export default function CardUploader() {
         {tab === "upload" ? (
           <div>
             <div className="mb-7">
-              <h1 className="text-2xl font-bold text-gray-800">Scan Business Cards</h1>
+              <h1 className="text-2xl font-bold text-gray-800">
+                Scan Business Cards
+              </h1>
               <p className="text-gray-400 text-sm mt-1">
                 OCR runs in your browser — images never leave your device.
               </p>
@@ -180,31 +214,42 @@ export default function CardUploader() {
             {loading && progress.length > 0 && (
               <div className="mb-6 flex flex-col gap-3">
                 {progress.map((p, i) => (
-                  <div key={i} className="bg-white border border-[#D5E8FF] rounded-xl px-4 py-3">
+                  <div
+                    key={i}
+                    className="bg-white border border-[#D5E8FF] rounded-xl px-4 py-3"
+                  >
                     <p className="text-xs font-semibold text-[#4674AB] mb-2">
                       Card #{i + 1}
                     </p>
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400 w-10">Front</span>
+                        <span className="text-xs text-gray-400 w-10">
+                          Front
+                        </span>
                         <div className="flex-1 bg-gray-100 rounded-full h-1.5">
                           <div
                             className="bg-[#4674AB] h-1.5 rounded-full transition-all"
                             style={{ width: `${p.front}%` }}
                           />
                         </div>
-                        <span className="text-xs text-gray-400 w-8 text-right">{p.front}%</span>
+                        <span className="text-xs text-gray-400 w-8 text-right">
+                          {p.front}%
+                        </span>
                       </div>
                       {cards[i]?.backImage && (
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-400 w-10">Back</span>
+                          <span className="text-xs text-gray-400 w-10">
+                            Back
+                          </span>
                           <div className="flex-1 bg-gray-100 rounded-full h-1.5">
                             <div
                               className="bg-[#7A5491] h-1.5 rounded-full transition-all"
                               style={{ width: `${p.back}%` }}
                             />
                           </div>
-                          <span className="text-xs text-gray-400 w-8 text-right">{p.back}%</span>
+                          <span className="text-xs text-gray-400 w-8 text-right">
+                            {p.back}%
+                          </span>
                         </div>
                       )}
                     </div>
@@ -220,7 +265,12 @@ export default function CardUploader() {
                 className="flex items-center justify-center gap-2 px-6 h-11 rounded-lg bg-[#4674AB] text-white text-base font-semibold transition hover:bg-[#3a5e8f]"
               >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M10 4v12M4 10h12" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
+                  <path
+                    d="M10 4v12M4 10h12"
+                    stroke="#fff"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
                 </svg>
                 Add Card
               </button>
@@ -242,13 +292,32 @@ export default function CardUploader() {
                 >
                   {loading ? (
                     <>
-                      <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
-                        <path d="M12 2a10 10 0 0110 10" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+                      <svg
+                        className="animate-spin"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="rgba(255,255,255,0.3)"
+                          strokeWidth="2"
+                        />
+                        <path
+                          d="M12 2a10 10 0 0110 10"
+                          stroke="#fff"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
                       </svg>
                       Processing…
                     </>
-                  ) : "Download Excel"}
+                  ) : (
+                    "Download Excel"
+                  )}
                 </button>
               )}
             </div>
