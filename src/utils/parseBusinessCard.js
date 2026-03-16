@@ -9,9 +9,8 @@ export const parseBusinessCard = (rawText) => {
     ...text.matchAll(/(https?:\/\/)?(www\.)?[a-zA-Z0-9-]+\.[a-z]{2,}/g),
   ].map((m) => m[0]);
 
-  const phones = [
-    ...text.matchAll(/(\+91[\s-]?)?\d{2,5}[\s-]?\d{6,8}|\d{10}/g),
-  ].map((m) => m[0]);
+const phones = [...text.matchAll(/(\+?\d{1,3}[\s-]?)?\(?\d{2,4}\)?[\s-]?\d{3,5}[\s-]?\d{3,5}/g)]
+  .map(m => m[0]);
 
   const companyMatch = text.match(
     /(.*(PVT\.?|PRIVATE|LTD\.?|LIMITED|CORPORATION|INDIA|TRADING|ELECTRONICS).*)/i
