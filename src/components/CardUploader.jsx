@@ -122,7 +122,7 @@ export default function CardUploader() {
       )}
 
       {/* Header */}
-      <header className="bg-white border-b border-[#D5E8FF] px-8 py-4 flex items-center justify-between sticky top-0 z-40">
+      <header className="bg-white border-b border-[#D5E8FF] px-8 py-4 flex flex-col md:flex-row items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <span className="text-2xl">🪪</span>
           <span className="text-xl font-bold text-[#4674AB] tracking-tight">CardScan Pro</span>
@@ -214,7 +214,7 @@ export default function CardUploader() {
             )}
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-center gap-5 mt-4">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-5 mt-4">
               <button
                 onClick={addCard}
                 className="flex items-center justify-center gap-2 px-6 h-11 rounded-lg bg-[#4674AB] text-white text-base font-semibold transition hover:bg-[#3a5e8f]"
