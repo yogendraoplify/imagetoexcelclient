@@ -60,6 +60,7 @@ export default function CardUploader() {
       // Response is now a binary Excel file, not JSON
       const res = await axios.post(`${BASE_URL}/api/ocr/cards`, form, {
         responseType: "blob",
+        timeout: 120000, // 2 minutes timeout for processing
       });
 
       // Trigger browser download
