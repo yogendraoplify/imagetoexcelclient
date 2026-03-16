@@ -8,10 +8,6 @@ import InstallPrompt from './components/InstallPrompt'
 const App = () => {
   return (
     <div>
-      <h1 className='text-3xl font-bold underline text-center mt-10'>
-        Welcome to P2E App
-      </h1>
-      
      <div className='text-center mt-5'>
       <CardUploader />
             <InstallPrompt />
