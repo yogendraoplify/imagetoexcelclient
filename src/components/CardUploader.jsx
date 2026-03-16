@@ -23,7 +23,9 @@ export default function CardUploader() {
     setEntries(res.data);
   };
 
-  useEffect(() => { fetchEntries(); }, []);
+  useEffect(() => {
+    fetchEntries();
+  }, []);
 
   const addCard = () => {
     if (cards.length >= MAX_CARDS)
@@ -39,7 +41,7 @@ export default function CardUploader() {
 
   const updateCard = (id, field, file) =>
     setCards((c) =>
-      c.map((card) => (card.id === id ? { ...card, [field]: file } : card))
+      c.map((card) => (card.id === id ? { ...card, [field]: file } : card)),
     );
 
   const submit = async () => {
@@ -55,8 +57,20 @@ export default function CardUploader() {
         if (card.backImage) form.append(`cards[${i}][back]`, card.backImage);
       });
 
-      const res = await axios.post(`${BASE_URL}/api/ocr/cards`, form);
-      showToast(`${res.data.savedCount} card(s) saved to database!`);
+      // Response is now a binary Excel file, not JSON
+      const res = await axios.post(`${BASE_URL}/api/ocr/cards`, form, {
+        responseType: "blob",
+      });
+
+      // Trigger browser download
+      // const url = URL.createObjectURL(res.data);
+      // const a = document.createElement("a");
+      // a.href = url;
+      // a.download = "business-cards.xlsx";
+      // a.click();
+      // URL.revokeObjectURL(url);
+
+      showToast("Cards processed and downloaded!");
       setCards([]);
       fetchEntries();
       setTab("entries");
@@ -69,7 +83,6 @@ export default function CardUploader() {
 
   return (
     <div className="min-h-screen w-full bg-[#F4F8FB] font-['Inter']">
-
       {/* Toast */}
       {toast && (
         <div
@@ -97,9 +110,10 @@ export default function CardUploader() {
               key={key}
               onClick={() => setTab(key)}
               className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-all
-                ${tab === key
-                  ? "bg-[#EEF4FF] text-[#4674AB] border-[#4674AB]"
-                  : "bg-white text-gray-500 border-gray-200 hover:border-[#4674AB] hover:text-[#4674AB]"
+                ${
+                  tab === key
+                    ? "bg-[#EEF4FF] text-[#4674AB] border-[#4674AB]"
+                    : "bg-white text-gray-500 border-gray-200 hover:border-[#4674AB] hover:text-[#4674AB]"
                 }`}
             >
               {label}
@@ -110,7 +124,6 @@ export default function CardUploader() {
 
       {/* Main */}
       <main className="max-w-[1240px] mx-auto px-6 py-8">
-
         {tab === "upload" ? (
           <div>
             <div className="mb-7">
@@ -214,7 +227,12 @@ export default function CardUploader() {
                     </>
                   ) : (
                     <>
-                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                      >
                         <rect
                           x="3"
                           y="2"
@@ -231,7 +249,7 @@ export default function CardUploader() {
                           strokeLinecap="round"
                         />
                       </svg>
-                      Download
+                      Convert
                     </>
                   )}
                 </button>
